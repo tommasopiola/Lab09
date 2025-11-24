@@ -12,6 +12,7 @@ class Model:
         self._costo = 0
 
         # TODO: Aggiungere eventuali altri attributi
+        self._tour_disponibili = []  # Lista di supporto per la ricorsione
 
         # Caricamento
         self.load_tour()
@@ -40,6 +41,18 @@ class Model:
         """
 
         # TODO
+        relazioni = TourDAO.get_tour_attrazioni()
+        if relazioni:
+            for relazione in relazioni:
+
+                tour_obj = self.tour_map.get(relazione["id_tour"])
+                attr_obj = self.attrazioni_map.get(relazione["id_attrazione"])
+
+                if tour_obj and attr_obj:
+                    # Collegamento bidirezionale
+                    tour_obj.attrazioni.add(attr_obj)  # Aggiungo l'attrazione al Tour
+                    attr_obj.tour.add(tour_obj)  # Aggiungo il Tour all'Attrazione
+
 
     def genera_pacchetto(self, id_regione: str, max_giorni: int = None, max_budget: float = None):
         """
