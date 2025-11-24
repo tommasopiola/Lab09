@@ -70,10 +70,56 @@ class Model:
         self._valore_ottimo = -1
 
         # TODO
+        # filtro i tour della regione selezionata
+        self._tour_disponibili = [
+            t for t in self.tour_map.values() if t.id_regione == id_regione
+        ]
+
+        # avvio la ricorsione
+        # passo anche max_giorni e max_budget per comodità
+        self._ricorsione(0, [], 0, 0, 0, set(), max_giorni, max_budget)
 
         return self._pacchetto_ottimo, self._costo, self._valore_ottimo
 
-    def _ricorsione(self, start_index: int, pacchetto_parziale: list, durata_corrente: int, costo_corrente: float, valore_corrente: int, attrazioni_usate: set):
+    # aggiungo max_giorni e max_budget nei parametri della funzione
+    def _ricorsione(self, start_index: int, pacchetto_parziale: list, durata_corrente: int, costo_corrente: float, valore_corrente: int, attrazioni_usate: set, max_giorni: int, max_budget: float):
         """ Algoritmo di ricorsione che deve trovare il pacchetto che massimizza il valore culturale"""
 
         # TODO: è possibile cambiare i parametri formali della funzione se ritenuto opportuno
+
+        # controllo se ho trovato una soluzione migliore
+        if valore_corrente > self._valore_ottimo:
+            self._valore_ottimo = valore_corrente
+            self._pacchetto_ottimo = list(pacchetto_parziale)
+            self._costo = costo_corrente
+
+        # caso Base: Ho esaminato tutti i tour disponibili
+        if start_index >= len(self._tour_disponibili):
+            return
+
+        # recupero il tour corrente
+        t = self._tour_disponibili[start_index]
+
+        # verifica Vincoli:
+        # a) Budget (se definito)
+        vincolo_budget_ok = (max_budget is None) or (costo_corrente + t.costo <= max_budget)
+        # b) Durata (se definita)
+        vincolo_durata_ok = (max_giorni is None) or (durata_corrente + t.durata_giorni <= max_giorni)
+        # c) Attrazioni Uniche (intersezione tra set deve essere vuota)
+        vincolo_attrazioni_ok = attrazioni_usate.isdisjoint(t.attrazioni)
+
+        if vincolo_budget_ok and vincolo_durata_ok and vincolo_attrazioni_ok:
+
+            # nuovi dati per la chiamata ricorsiva
+            nuovo_pacchetto = pacchetto_parziale + [t]
+            nuova_durata = durata_corrente + t.durata_giorni
+            nuovo_costo = costo_corrente + t.costo
+            # calcolo valore culturale del singolo tour sommando le sue attrazioni
+            valore_tour = sum(a.valore_culturale for a in t.attrazioni)
+            nuovo_valore = valore_corrente + valore_tour
+            nuove_attrazioni = attrazioni_usate | t.attrazioni  # Unione dei set
+
+            self._ricorsione(start_index + 1, nuovo_pacchetto, nuova_durata, nuovo_costo, nuovo_valore, nuove_attrazioni, max_giorni, max_budget)
+
+        # procedo senza aggiungere questo tour
+        self._ricorsione(start_index + 1, pacchetto_parziale, durata_corrente, costo_corrente, valore_corrente, attrazioni_usate, max_giorni, max_budget)
